@@ -1,0 +1,11 @@
+{
+  "name": "Hermes",
+  "version": "0.0.1",
+  "description": "Hermes.",
+  "main": "Hermes.js",
+  "author": "Alcha",
+  "license": "GPL",
+  "dependencies": {
+    "eris": "github:abalabahaha/eris"
+  }
+}
