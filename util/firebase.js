@@ -1,5 +1,5 @@
 const firebase = require("firebase");
-const config = require("./config.js");
+const config = require("./config.json");
 
 firebase.initializeApp({
     apiKey: config.apiKey,
@@ -13,7 +13,7 @@ const database = firebase.database();
 
 // ========================== Local functions =================================================== //
 function addNewUser(userTokenIn, msg) {
-    if (!userExists(userTokenIn)) {
+    if (userExists(userTokenIn, msg)) {
         console.log("Adding new user - " + msg.author.username);
         database.ref('users/' + userTokenIn).set({
             userId: msg.author.id,
@@ -27,9 +27,9 @@ function addNewUser(userTokenIn, msg) {
     }
 }
 
-function userExists(userTokenIn) {
+function userExists(userTokenIn, msg) {
     database.ref('users/' + userTokenIn).once('value').then(function(snapshot) {
-        return snapshot.val() != null;
+        return snapshot.val().userId != msg.author.id;
     });
 }
 
@@ -38,7 +38,7 @@ module.exports = {
     addNewUser: function (userTokenIn, msg) {
         addNewUser(userTokenIn, msg);
     },
-    userExists: function (userTokenIn) {
-        userExists(userTokenIn);
+    userExists: function (userTokenIn, msg) {
+        userExists(userTokenIn, msg);
     }
 }
