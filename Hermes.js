@@ -66,26 +66,67 @@ bot.registerCommand('initiate', (msg, args) => {
 
                     return "You've successfully been added!";
 
-                } else if(snapshot.val().userId == msg.author.id) {
-                    return "You've already been added to the system, what you tryin' to pull? :stuck_out_tongue:"
+                } else if (snapshot.val().userId == msg.author.id) {
+                    return "You've already been added to the system, what you tryin' to pull? :stuck_out_tongue:";
                 } else {
                     console.log("addNewUser failed, user token already exists.");
                     console.log("userTokenIn = " + tokenIn);
 
-                    return "Sorry, this key is already in use. Please generate a new one and try again."
+                    return "Sorry, this key is already in use. Please generate a new one and try again.";
                 }
             });
         } else {
-            return 'Please input a valid token, it should be 10 characters long.'
+            return 'Please input a valid token, it should be 10 characters long.';
         }
     } else {
-        return 'This command can only be executed in PMs.'
+        return 'This command can only be executed in PMs.';
     }
 }, {
     description: 'Initiate a new Discord Direct user.',
     fullDescription: 'Create a new association for a Discord Direct user. ' +
         'Must have an initiation token to use the command.'
 });
+
+function guid() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+        s4() + '-' + s4() + s4() + s4();
+}
+// ========================== Send Message ====================================================== //
+bot.registerCommand('send', (msg, args) => {
+    if (msg.guild == undefined) {
+        if (args.length != 0) {
+            /**
+             * /mesages/send/<userToken>/<message>
+             * 
+             * message: {
+             *  content: "String",
+             *  fromName: "String",
+             *  fromNum: "String",
+             *  userToken: "String"
+             * }
+             */
+            let msgToken = guid();
+            let tokenIn = "User Token";
+            let msgStr = '/messages/send/' + tokenIn + '/' + msgToken;
+
+            database.ref(msgStr).set({
+                content: args.join(' '),
+                fromName: 'From Name',
+                fromNum: 'From Number',
+                userToken: tokenIn
+            });
+        } else {
+            return "Please provide a message to send."
+        }
+    } else {
+        return 'This command can only be executed in PMs.';
+    }
+})
 
 // ========================== Initiate bot connection =========================================== //
 bot.connect();
