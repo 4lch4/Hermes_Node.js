@@ -63,10 +63,11 @@ function getUser(userIdIn) {
 
 function addNewUser(tokenIn, msg) {
     console.log("Adding new user - " + msg.author.username);
-    database.ref('users/' + tokenIn).set({
-        userId: msg.author.id,
+    database.ref('users/' + msg.author.id).set({
+        userToken: tokenIn,
         username: msg.author.username,
-        channelId: msg.channel.id
+        channelId: msg.channel.id,
+        userNum: "Temp"
     });
 };
 
