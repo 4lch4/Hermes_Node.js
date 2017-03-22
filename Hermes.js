@@ -44,6 +44,23 @@ bot.on("ready", () => {
     });
 });
 
+function getUser(userIdIn) {
+    console.log("Retrieving user - " + userIdIn);
+
+    return database.ref('users/' + userIdIn).once('value').then((snapshot) => {
+        if (snapshot.val() != null) {
+            let user = {
+                channelId: snapshot.val().channelId,
+                userToken: snapshot.val().userToken,
+                username: snapshot.val().username,
+                userNum: snapshot.val().userNum
+            }
+
+            return user;
+        }
+    });
+}
+
 function addNewUser(tokenIn, msg) {
     console.log("Adding new user - " + msg.author.username);
     database.ref('users/' + tokenIn).set({
