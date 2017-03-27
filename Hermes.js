@@ -61,36 +61,40 @@ function getUser(userIdIn) {
     });
 }
 
-function addNewUser(tokenIn, msg) {
-    console.log("Adding new user - " + msg.author.username);
-    database.ref('users/' + msg.author.id).set({
-        userToken: tokenIn,
-        username: msg.author.username,
-        channelId: msg.channel.id,
-        userNum: "Temp"
-    });
+function addNewUser(user) { 
+    console.log("Adding new user - " + user.username); 
+    database.ref('users/' + user.userToken).set({ 
+        userId: user.userId, 
+        username: user.username, 
+        channelId: user.channelId 
+    }); 
 };
-
 // ========================== Initiate New User ================================================= //
 bot.registerCommand('initiate', (msg, args) => {
     if (msg.guild == undefined) {
         let tokenIn = args[0];
-        let channel = msg.channel.id;
+        let userIdIn = msg.author.id;
 
         if (tokenIn.length == 10) {
             return database.ref('users/' + tokenIn).once('value').then(function (snapshot) {
                 if (snapshot.val() == null) {
-                    addNewUser(tokenIn, msg);
+                    let user = {
+                        userId: userIdIn,
+                        userToken: tokenIn,
+                        username: msg.author.username,
+                        channelId: msg.channel.id
+                    }
+                    addNewUser(user);
 
                     return "You've successfully been added!";
 
                 } else if (snapshot.val().userId == msg.author.id) {
-                    return "You've already been added to the system, what you tryin' to pull? :stuck_out_tongue:";
+                    return "You've already been added to the system, what you tryin' to pull? :stuck_out_tongue:"
                 } else {
                     console.log("addNewUser failed, user token already exists.");
                     console.log("userTokenIn = " + tokenIn);
 
-                    return "Sorry, this key is already in use. Please generate a new one and try again.";
+                    return "Sorry, this key is already in use. Please generate a new one and try again."
                 }
             });
         } else {
