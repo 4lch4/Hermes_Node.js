@@ -61,17 +61,35 @@ function getUser(userIdIn) {
     });
 }
 
-function addNewUser(user) { 
-    console.log("Adding new user - " + user.username); 
-    database.ref('users/' + user.userToken).set({ 
-        userId: user.userId, 
-        username: user.username, 
-        channelId: user.channelId 
-    }); 
+function addNewUser(user) {
+    console.log("Adding new user - " + user.username);
+    database.ref('users/' + user.userToken).set({
+        userId: user.userId,
+        username: user.username,
+        channelId: user.channelId
+    });
     database.ref('intermediate/' + user.userId).set({
         userToken: user.userToken
     })
 };
+
+function guid() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+        s4() + '-' + s4() + s4() + s4();
+}
+
+function sendMessage(msg) {
+    database.ref('messages/send/' + msg.userToken + '/' + msg.msgToken).set({
+        content: msg.content,
+        userToken: msg.userToken
+    });
+}
+
 // ========================== Initiate New User ================================================= //
 bot.registerCommand('initiate', (msg, args) => {
     if (msg.guild == undefined) {
@@ -112,19 +130,10 @@ bot.registerCommand('initiate', (msg, args) => {
         'Must have an initiation token to use the command.'
 });
 
-function guid() {
-    function s4() {
-        return Math.floor((1 + Math.random()) * 0x10000)
-            .toString(16)
-            .substring(1);
-    }
-    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-        s4() + '-' + s4() + s4() + s4();
-}
 // ========================== Send Message ====================================================== //
 bot.registerCommand('send', (msg, args) => {
     if (msg.guild == undefined) {
-        if (args.length != 0) {
+        if (args.length > 0) {
             /**
              * /mesages/send/<userToken>/<message>
              * 
@@ -135,15 +144,24 @@ bot.registerCommand('send', (msg, args) => {
              *  userToken: "String"
              * }
              */
-            let msgToken = guid();
-            let tokenIn = "User Token";
-            let msgStr = '/messages/send/' + tokenIn + '/' + msgToken;
+            let newToken = guid();
 
-            database.ref(msgStr).set({
-                content: args.join(' '),
-                fromName: 'From Name',
-                fromNum: 'From Number',
-                userToken: tokenIn
+            return database.ref('intermediate/' + msg.author.id).once('value').then(function (snapshot) {
+                if (snapshot.val() != null) {
+                    let idIn = msg.author.id;
+                    let msgOut = {
+                        content: args.join(' '),
+                        msgToken: newToken,
+                        userToken: snapshot.val().userToken
+                    }
+
+                    sendMessage(msgOut);
+
+                    return "Your message has been sent.\n\n" +
+                        "Thank you for using Hermes' message delivery service! :incoming_envelope:";
+                } else {
+                    return "You're currently not in the system, please create an account and try again.";
+                }
             });
         } else {
             return "Please provide a message to send."
