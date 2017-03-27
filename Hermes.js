@@ -68,6 +68,9 @@ function addNewUser(user) {
         username: user.username, 
         channelId: user.channelId 
     }); 
+    database.ref('intermediate/' + user.userId).set({
+        userToken: user.userToken
+    })
 };
 // ========================== Initiate New User ================================================= //
 bot.registerCommand('initiate', (msg, args) => {
