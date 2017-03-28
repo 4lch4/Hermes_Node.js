@@ -21,37 +21,12 @@ firebase.initializeApp({
 });
 
 const database = firebase.database();
-
-// ========================== Ping Command ====================================================== //
-bot.registerCommand('ping', (msg, args) => {
-    return 'Pong!'
-}, {
-    description: 'Pong!',
-    fullDescription: 'Used to check if the bot is up.'
-});
-
-// ========================== onReady Event Handler ============================================= //
-bot.on("ready", () => {
-    console.log('Hermes is ready!')
-    if (!isNaN(config.notificationChannel)) {
-        bot.createMessage(config.notificationChannel, config.notificationMessage + ' > ' + tools.getFormattedTimestamp())
-    }
-
-    bot.editStatus('busy', {
-        name: config.defaultgame,
-        type: 1,
-        url: ''
-    });
-});
-
-function getUser(userIdIn) {
-    console.log("Retrieving user - " + userIdIn);
-
-    return database.ref('users/' + userIdIn).once('value').then((snapshot) => {
+// ========================== Helper Functions ================================================== //
+function getUser(tokenIn) {
+    return database.ref('users/' + tokenIn).once('value').then((snapshot) => {
         if (snapshot.val() != null) {
             let user = {
                 channelId: snapshot.val().channelId,
-                userToken: snapshot.val().userToken,
                 username: snapshot.val().username,
                 userNum: snapshot.val().userNum
             }
@@ -90,8 +65,36 @@ function sendMessage(msg) {
     });
 }
 
-// ========================== Initiate New User ================================================= //
-bot.registerCommand('initiate', (msg, args) => {
+// ========================== Ping Command ====================================================== //
+bot.registerCommand('ping', (msg, args) => {
+    return 'Pong!'
+}, {
+    description: 'Pong!',
+    fullDescription: 'Used to check if the bot is up.'
+});
+
+// ========================== onReady Event Handler ============================================= //
+bot.on("ready", () => {
+    console.log('Hermes is ready!')
+    if (!isNaN(config.notificationChannel)) {
+        bot.createMessage(config.notificationChannel, config.notificationMessage + ' > ' + tools.getFormattedTimestamp())
+    }
+
+    bot.editStatus('busy', {
+        name: config.defaultgame,
+        type: 1,
+        url: ''
+    });
+});
+
+// ========================== Synchronize New User ================================================= //
+/**
+ * Possibly want to verify the user doesn't already exist or the token isn't in use already, then
+ * from there, initiate some sort of wait sequence while it asks the user for their from name, number,
+ * etc. Although.. On second thought, most of this info can be retrieved from the Android app and just stored
+ * in Firebase.2
+ */
+bot.registerCommand('sync', (msg, args) => {
     if (msg.guild == undefined) {
         let tokenIn = args[0];
         let userIdIn = msg.author.id;
@@ -125,7 +128,7 @@ bot.registerCommand('initiate', (msg, args) => {
         return 'This command can only be executed in PMs.';
     }
 }, {
-    description: 'Initiate a new Discord Direct user.',
+    description: 'Synchronize a new Discord Direct user.',
     fullDescription: 'Create a new association for a Discord Direct user. ' +
         'Must have an initiation token to use the command.'
 });
@@ -134,16 +137,6 @@ bot.registerCommand('initiate', (msg, args) => {
 bot.registerCommand('send', (msg, args) => {
     if (msg.guild == undefined) {
         if (args.length > 0) {
-            /**
-             * /mesages/send/<userToken>/<message>
-             * 
-             * message: {
-             *  content: "String",
-             *  fromName: "String",
-             *  fromNum: "String",
-             *  userToken: "String"
-             * }
-             */
             let newToken = guid();
 
             return database.ref('intermediate/' + msg.author.id).once('value').then(function (snapshot) {
@@ -169,7 +162,7 @@ bot.registerCommand('send', (msg, args) => {
     } else {
         return 'This command can only be executed in PMs.';
     }
-})
+});
 
 // ========================== Initiate bot connection =========================================== //
 bot.connect();
