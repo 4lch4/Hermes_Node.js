@@ -16,6 +16,7 @@ firebase.initializeApp({
     apiKey: config.apiKey,
     authDomain: config.authDomain,
     databaseURL: config.databaseURL,
+    projectId: config.projectId,
     storageBucket: config.storageBucket,
     messagingSenderId: config.messagingSenderId
 });
@@ -36,16 +37,25 @@ function getUser(tokenIn) {
     });
 }
 
-function addNewUser(user) {
-    console.log("Adding new user - " + user.username);
-    database.ref('users/' + user.userToken).set({
+function tokenExists(tokenIn, callback) {
+    let url = 'users/' + tokenIn;
+
+    database.ref(url).once('value').then((snapshot) => {
+        if (snapshot.val() != null) {
+            callback(true);
+        } else {
+            callback(false);
+        }
+    })
+}
+
+function syncNewUser(user) {
+    console.log("Synchronizing new user - " + user.username);
+    database.ref('users/' + user.userToken).update({
         userId: user.userId,
         username: user.username,
         channelId: user.channelId
     });
-    database.ref('intermediate/' + user.userId).set({
-        userToken: user.userToken
-    })
 };
 
 function guid() {
@@ -100,32 +110,27 @@ bot.registerCommand('sync', (msg, args) => {
         let userIdIn = msg.author.id;
 
         if (tokenIn.length == 10) {
-            return database.ref('users/' + tokenIn).once('value').then(function (snapshot) {
-                if (snapshot.val() == null) {
+            tokenExists(tokenIn, function (exists) {
+                if (exists == true) {
                     let user = {
                         userId: userIdIn,
                         userToken: tokenIn,
                         username: msg.author.username,
                         channelId: msg.channel.id
                     }
-                    addNewUser(user);
 
-                    return "You've successfully been added!";
+                    syncNewUser(user);
 
-                } else if (snapshot.val().userId == msg.author.id) {
-                    return "You've already been added to the system, what you tryin' to pull? :stuck_out_tongue:"
+                    bot.createMessage(msg.channel.id, "You've successfully been added!");
                 } else {
-                    console.log("addNewUser failed, user token already exists.");
-                    console.log("userTokenIn = " + tokenIn);
-
-                    return "Sorry, this key is already in use. Please generate a new one and try again."
+                    bot.createMessage(msg.channel.id, "Your token doesn't seem to exist, please generate a new one and try again.");
                 }
             });
         } else {
-            return 'Please input a valid token, it should be 10 characters long.';
+            bot.createMessage(msg.channel.id, 'Please input a valid token, it should be 10 characters long.');
         }
     } else {
-        return 'This command can only be executed in PMs.';
+        bot.createMessage(msg.channel.id, 'This command can only be executed in PMs.');
     }
 }, {
     description: 'Synchronize a new Discord Direct user.',
