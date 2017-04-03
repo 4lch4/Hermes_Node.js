@@ -23,16 +23,27 @@ firebase.initializeApp({
 
 const database = firebase.database();
 // ========================== Helper Functions ================================================== //
-function getUser(tokenIn) {
+function getUserByToken(tokenIn, callback) {
     return database.ref('users/' + tokenIn).once('value').then((snapshot) => {
         if (snapshot.val() != null) {
             let user = {
+                userToken: snapshot.key,
                 channelId: snapshot.val().channelId,
                 username: snapshot.val().username,
-                userNum: snapshot.val().userNum
+                phoneNum: snapshot.val().phoneNum
             }
 
-            return user;
+            callback(user);
+        }
+    });
+}
+
+function getUserById(idIn, callback) {
+    database.ref('intermediate/' + idIn).once('value').then((snapshot) => {
+        if (snapshot.val() != null) {
+            getUserByToken(snapshot.val(), (user) => {
+                callback(user);
+            });
         }
     });
 }
@@ -138,28 +149,49 @@ bot.registerCommand('sync', (msg, args) => {
         'Must have an initiation token to use the command.'
 });
 
+function convertArgsToMsg(args) {
+    let tempMsg = {
+        msgToken: guid(),
+        toField: '',
+        userToken: '',
+        content: ''
+    }
+
+    if (args[0].startsWith("\"")) {
+        // Concat args into full string to use substring
+        let fullStr = args.join(' ');
+
+        // Offset msgStart by 2 in order to be at the position the content starts
+        let msgStart = fullStr.indexOf("\"", 1) + 2;
+
+        // Remove the offset in order to get the content between the quotes
+        tempMsg.toField = fullStr.substring(1, msgStart - 2);
+
+        // Set message content to everything after the quotes
+        tempMsg.content = fullStr.substring(msgStart);
+    } else if (args[0].length == 10) {
+        // User provided a valid number, set it as toField
+        tempMsg.toField = args[0];
+
+        // Remove the first argument
+        args.shift();
+
+        // Set message content to everything in args
+        tempMsg.content = args.join(' ');
+    }
+
+    return tempMsg;
+}
+
 // ========================== Send Message ====================================================== //
 bot.registerCommand('send', (msg, args) => {
     if (msg.guild == undefined) {
         if (args.length > 0) {
-            let newToken = guid();
+            let message = convertArgsToMsg(args);
 
-            return database.ref('intermediate/' + msg.author.id).once('value').then(function (snapshot) {
-                if (snapshot.val() != null) {
-                    let idIn = msg.author.id;
-                    let msgOut = {
-                        content: args.join(' '),
-                        msgToken: newToken,
-                        userToken: snapshot.val().userToken
-                    }
-
-                    sendMessage(msgOut);
-
-                    return "Your message has been sent.\n\n" +
-                        "Thank you for using Hermes' message delivery service! :incoming_envelope:";
-                } else {
-                    return "You're currently not in the system, please create an account and try again.";
-                }
+            getUserById(msg.author.id, (user) => {
+                message.userToken = user.userToken;
+                console.log(message);
             });
         } else {
             return "Please provide a message to send."
