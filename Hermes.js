@@ -44,6 +44,8 @@ function getUserById(idIn, callback) {
             getUserByToken(snapshot.val(), (user) => {
                 callback(user);
             });
+        } else {
+            callback(null);
         }
     });
 }
@@ -60,12 +62,19 @@ function tokenExists(tokenIn, callback) {
     })
 }
 
-function syncNewUser(user) {
-    console.log("Synchronizing new user - " + user.username);
-    database.ref('users/' + user.userToken).update({
-        userId: user.userId,
-        username: user.username,
-        channelId: user.channelId
+function syncNewUser(user, callback) {
+    // Verify user doesn't already exist
+    getUserById(user.userId, (user) => {
+        if (user == null) {
+            database.ref('users/' + user.userToken).update({
+                userId: user.userId,
+                username: user.username,
+                channelId: user.channelId
+            });
+            callback(true);
+        } else {
+            callback(false);
+        }
     });
 };
 
@@ -176,9 +185,13 @@ bot.registerCommand('sync', (msg, args) => {
                         channelId: msg.channel.id
                     }
 
-                    syncNewUser(user);
-
-                    bot.createMessage(msg.channel.id, "You've successfully been added!");
+                    syncNewUser(user, (success) => {
+                        if (success) {
+                            bot.createMessage(msg.channel.id, "You've successfully been added!");
+                        } else {
+                            bot.createMessage(msg.channel.id, "You've already been added, what're you tryin' to pull? :stuck_out_tongue_winking_eye:")
+                        }
+                    });
                 } else {
                     bot.createMessage(msg.channel.id, "Your token doesn't seem to exist, please generate a new one and try again.");
                 }
