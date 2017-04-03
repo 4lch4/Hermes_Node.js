@@ -80,9 +80,8 @@ function guid() {
 }
 
 function sendMessage(msg, user) {
-    database.ref('messagesOut' + user.userToken + '/' + msg.msgToken).set({
+    database.ref('messagesOut/' + user.userToken + '/' + msg.msgToken).set({
         content: msg.content,
-        userToken: user.userToken,
         msgTo: msg.toField
     });
 }
@@ -192,7 +191,7 @@ bot.registerCommand('send', (msg, args) => {
 
             getUserById(msg.author.id, (user) => {
                 message.userToken = user.userToken;
-                console.log(message);
+                sendMessage(message, user);
             });
         } else {
             return "Please provide a message to send."
