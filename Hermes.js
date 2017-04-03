@@ -79,10 +79,11 @@ function guid() {
         s4() + '-' + s4() + s4() + s4();
 }
 
-function sendMessage(msg) {
-    database.ref('messages/send/' + msg.userToken + '/' + msg.msgToken).set({
+function sendMessage(msg, user) {
+    database.ref('messagesOut' + user.userToken + '/' + msg.msgToken).set({
         content: msg.content,
-        userToken: msg.userToken
+        userToken: user.userToken,
+        msgTo: msg.toField
     });
 }
 
