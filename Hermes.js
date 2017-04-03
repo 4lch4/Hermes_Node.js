@@ -79,11 +79,57 @@ function guid() {
         s4() + '-' + s4() + s4() + s4();
 }
 
-function sendMessage(msg, user) {
-    database.ref('messagesOut/' + user.userToken + '/' + msg.msgToken).set({
+function sendMessage(msg, user, callback) {
+    let refUrl = 'messagesOut/' + user.userToken;
+    let userRef = database.ref(refUrl);
+    let msgRef = database.ref(refUrl + '/' + msg.msgToken);
+
+    msgRef.set({
         content: msg.content,
         msgTo: msg.toField
     });
+
+    userRef.on('child_removed', (data) => {
+        // Item has been picked up by Android app and removed
+        if (data.key == msg.msgToken) {
+            userRef.off('child_removed');
+            callback(true);
+        }
+    });
+}
+
+function convertArgsToMsg(args) {
+    let tempMsg = {
+        msgToken: guid(),
+        toField: '',
+        userToken: '',
+        content: ''
+    }
+
+    if (args[0].startsWith("\"")) {
+        // Concat args into full string to use substring
+        let fullStr = args.join(' ');
+
+        // Offset msgStart by 2 in order to be at the position the content starts
+        let msgStart = fullStr.indexOf("\"", 1) + 2;
+
+        // Remove the offset in order to get the content between the quotes
+        tempMsg.toField = fullStr.substring(1, msgStart - 2);
+
+        // Set message content to everything after the quotes
+        tempMsg.content = fullStr.substring(msgStart);
+    } else if (args[0].length == 10) {
+        // User provided a valid number, set it as toField
+        tempMsg.toField = args[0];
+
+        // Remove the first argument
+        args.shift();
+
+        // Set message content to everything in args
+        tempMsg.content = args.join(' ');
+    }
+
+    return tempMsg;
 }
 
 // ========================== Ping Command ====================================================== //
@@ -149,40 +195,6 @@ bot.registerCommand('sync', (msg, args) => {
         'Must have an initiation token to use the command.'
 });
 
-function convertArgsToMsg(args) {
-    let tempMsg = {
-        msgToken: guid(),
-        toField: '',
-        userToken: '',
-        content: ''
-    }
-
-    if (args[0].startsWith("\"")) {
-        // Concat args into full string to use substring
-        let fullStr = args.join(' ');
-
-        // Offset msgStart by 2 in order to be at the position the content starts
-        let msgStart = fullStr.indexOf("\"", 1) + 2;
-
-        // Remove the offset in order to get the content between the quotes
-        tempMsg.toField = fullStr.substring(1, msgStart - 2);
-
-        // Set message content to everything after the quotes
-        tempMsg.content = fullStr.substring(msgStart);
-    } else if (args[0].length == 10) {
-        // User provided a valid number, set it as toField
-        tempMsg.toField = args[0];
-
-        // Remove the first argument
-        args.shift();
-
-        // Set message content to everything in args
-        tempMsg.content = args.join(' ');
-    }
-
-    return tempMsg;
-}
-
 // ========================== Send Message ====================================================== //
 bot.registerCommand('send', (msg, args) => {
     if (msg.guild == undefined) {
@@ -190,8 +202,17 @@ bot.registerCommand('send', (msg, args) => {
             let message = convertArgsToMsg(args);
 
             getUserById(msg.author.id, (user) => {
+                // Set messages UserToken
                 message.userToken = user.userToken;
-                sendMessage(message, user);
+
+                // Attempt to send message
+                sendMessage(message, user, (sent) => {
+                    if (sent) {
+                        bot.createMessage(msg.channel.id, "Your message has successfully been sent!");
+                    } else {
+                        bot.createMessage(msg.channel.id, "There was an error sending your message. Please try again.");
+                    }
+                });
             });
         } else {
             return "Please provide a message to send."
