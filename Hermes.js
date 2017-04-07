@@ -22,124 +22,6 @@ firebase.initializeApp({
 });
 
 const database = firebase.database();
-// ========================== Helper Functions ================================================== //
-function getUserByToken(tokenIn, callback) {
-    return database.ref('users/' + tokenIn).once('value').then((snapshot) => {
-        if (snapshot.val() != null) {
-            let user = {
-                userToken: snapshot.key,
-                channelId: snapshot.val().channelId,
-                username: snapshot.val().username,
-                phoneNum: snapshot.val().phoneNum
-            }
-
-            callback(user);
-        }
-    });
-}
-
-function getUserById(idIn, callback) {
-    database.ref('intermediate/' + idIn).once('value').then((snapshot) => {
-        if (snapshot.val() != null) {
-            getUserByToken(snapshot.val(), (user) => {
-                callback(user);
-            });
-        } else {
-            callback(null);
-        }
-    });
-}
-
-function tokenExists(tokenIn, callback) {
-    let url = 'users/' + tokenIn;
-
-    database.ref(url).once('value').then((snapshot) => {
-        if (snapshot.val() != null) {
-            callback(true);
-        } else {
-            callback(false);
-        }
-    })
-}
-
-function syncNewUser(user, callback) {
-    // Verify user doesn't already exist
-    getUserById(user.userId, (user) => {
-        if (user == null) {
-            database.ref('users/' + user.userToken).update({
-                userId: user.userId,
-                username: user.username,
-                channelId: user.channelId
-            });
-            callback(true);
-        } else {
-            callback(false);
-        }
-    });
-};
-
-function guid() {
-    function s4() {
-        return Math.floor((1 + Math.random()) * 0x10000)
-            .toString(16)
-            .substring(1);
-    }
-    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-        s4() + '-' + s4() + s4() + s4();
-}
-
-function sendMessage(msg, user, callback) {
-    let refUrl = 'messagesOut/' + user.userToken;
-    let userRef = database.ref(refUrl);
-    let msgRef = database.ref(refUrl + '/' + msg.msgToken);
-
-    msgRef.set({
-        content: msg.content,
-        msgTo: msg.toField
-    });
-
-    userRef.on('child_removed', (data) => {
-        // Item has been picked up by Android app and removed
-        if (data.key == msg.msgToken) {
-            userRef.off('child_removed');
-            callback(true);
-        }
-    });
-}
-
-function convertArgsToMsg(args) {
-    let tempMsg = {
-        msgToken: guid(),
-        toField: '',
-        userToken: '',
-        content: ''
-    }
-
-    if (args[0].startsWith("\"")) {
-        // Concat args into full string to use substring
-        let fullStr = args.join(' ');
-
-        // Offset msgStart by 2 in order to be at the position the content starts
-        let msgStart = fullStr.indexOf("\"", 1) + 2;
-
-        // Remove the offset in order to get the content between the quotes
-        tempMsg.toField = fullStr.substring(1, msgStart - 2);
-
-        // Set message content to everything after the quotes
-        tempMsg.content = fullStr.substring(msgStart);
-    } else if (args[0].length == 10) {
-        // User provided a valid number, set it as toField
-        tempMsg.toField = args[0];
-
-        // Remove the first argument
-        args.shift();
-
-        // Set message content to everything in args
-        tempMsg.content = args.join(' ');
-    }
-
-    return tempMsg;
-}
 
 // ========================== Ping Command ====================================================== //
 bot.registerCommand('ping', (msg, args) => {
@@ -237,3 +119,162 @@ bot.registerCommand('send', (msg, args) => {
 
 // ========================== Initiate bot connection =========================================== //
 bot.connect();
+
+// ========================== Database event listeners ========================================== //
+const msgsInRef = database.ref('messagesIn');
+
+// Indicates a new user has been added to the messagesIn queue
+msgsInRef.on('child_added', (userData) => {
+    let refUrl = 'messagesIn/' + userData.key;
+    let userMsgsIn = database.ref(refUrl);
+
+    userMsgsIn.on('child_added', (msg) => {
+        console.log('key = ' + msg.key);
+        let message = {
+            msgToken: msg.key,
+            from: msg.val().fromName,
+            content: msg.val().content,
+            sent: msg.val().sent
+        }
+
+        if (message.sent == undefined || message.sent != true) {
+            sendUserMessage(userData.key, message);
+        }
+    });
+});
+
+// ========================== Helper Functions ================================================== //
+function sendUserMessage(userToken, message) {
+    getUserByToken(userToken, (user) => {
+        bot.createMessage(user.channelId, {
+            embed: {
+                title: message.from,
+                description: message.content,
+                color: 3447003
+            }
+        });
+
+        let refUrl = 'messagesIn/' + userToken + '/' + message.msgToken;
+        database.ref(refUrl).update({
+            sent: true
+        });
+    });
+}
+
+function getUserByToken(tokenIn, callback) {
+    database.ref('users/' + tokenIn).once('value').then((snapshot) => {
+        if (snapshot.val() != null) {
+            let user = {
+                userToken: snapshot.key,
+                channelId: snapshot.val().channelId,
+                username: snapshot.val().username,
+                phoneNum: snapshot.val().phoneNum
+            }
+
+            callback(user);
+        }
+    });
+}
+
+function getUserById(idIn, callback) {
+    database.ref('intermediate/' + idIn).once('value').then((snapshot) => {
+        if (snapshot.val() != null) {
+            getUserByToken(snapshot.val(), (user) => {
+                callback(user);
+            });
+        } else {
+            callback(null);
+        }
+    });
+}
+
+function tokenExists(tokenIn, callback) {
+    let url = 'users/' + tokenIn;
+
+    database.ref(url).once('value').then((snapshot) => {
+        if (snapshot.val() != null) {
+            callback(true);
+        } else {
+            callback(false);
+        }
+    })
+}
+
+function syncNewUser(userA, callback) {
+    // Verify user doesn't already exist
+    getUserById(userA.userId, (userB) => {
+        if (userB == null) {
+            database.ref('users/' + userA.userToken).update({
+                userId: userA.userId,
+                username: userA.username,
+                channelId: userA.channelId
+            });
+            callback(true);
+        } else {
+            callback(false);
+        }
+    });
+};
+
+function guid() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+    }
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+        s4() + '-' + s4() + s4() + s4();
+}
+
+function sendMessage(msg, user, callback) {
+    let refUrl = 'messagesOut/' + user.userToken;
+    let userRef = database.ref(refUrl);
+    let msgRef = database.ref(refUrl + '/' + msg.msgToken);
+
+    msgRef.set({
+        content: msg.content,
+        msgTo: msg.toField
+    });
+
+    userRef.on('child_removed', (data) => {
+        // Item has been picked up by Android app and removed
+        if (data.key == msg.msgToken) {
+            userRef.off('child_removed');
+            callback(true);
+        }
+    });
+}
+
+function convertArgsToMsg(args) {
+    let tempMsg = {
+        msgToken: guid(),
+        toField: '',
+        userToken: '',
+        content: ''
+    }
+
+    if (args[0].startsWith("\"")) {
+        // Concat args into full string to use substring
+        let fullStr = args.join(' ');
+
+        // Offset msgStart by 2 in order to be at the position the content starts
+        let msgStart = fullStr.indexOf("\"", 1) + 2;
+
+        // Remove the offset in order to get the content between the quotes
+        tempMsg.toField = fullStr.substring(1, msgStart - 2);
+
+        // Set message content to everything after the quotes
+        tempMsg.content = fullStr.substring(msgStart);
+    } else if (args[0].length == 10) {
+        // User provided a valid number, set it as toField
+        tempMsg.toField = args[0];
+
+        // Remove the first argument
+        args.shift();
+
+        // Set message content to everything in args
+        tempMsg.content = args.join(' ');
+    }
+
+    return tempMsg;
+}
