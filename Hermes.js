@@ -2,8 +2,9 @@
 
 const Eris = require("eris");
 const config = require('./util/config.json');
-const info = require('./util/package.json');
-const tools = require('./util/tools.js');
+const info = require('./package.json');
+const toolsUtil = require('./util/tools');
+const tools = new toolsUtil()
 
 const bot = new Eris.CommandClient(config.token, {}, {
     description: info.description,
