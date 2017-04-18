@@ -11,6 +11,7 @@ const bot = new Eris.CommandClient(config.token, {}, {
     prefix: config.prefix
 });
 
+// ========================== Firebase Initialization =========================================== //
 // Firebase Cloud Messaging
 const admin = require("firebase-admin");
 
@@ -39,16 +40,25 @@ const database = firebase.database();
 /**
  * Using the provided user token, send a user the provided message.
  * 
- * @param {String} userToken 
+ * @param {String} userToken
  * @param {Message} message 
  */
 function sendUserMessage(userToken, message) {
     getUserByToken(userToken, (user) => {
-        bot.createMessage(user.channelId, {
-            embed: {
-                title: message.from,
-                description: message.content,
-                color: 3447003
+        bot.users.forEach((curr, index, values) => {
+            if (curr.id == user.userId) {
+                curr.getDMChannel().then((channel) => {
+                    channel.createMessage({
+                        embed: {
+                            title: message.from,
+                            description: message.content,
+                            color: 3447003
+                        }
+                    });
+                }).catch((e) => {
+                    console.log("Error:");
+                    console.log(e);
+                });
             }
         });
     });
@@ -277,6 +287,40 @@ bot.registerCommand('send', (msg, args) => {
         return 'This command can only be executed in PMs.';
     }
 });
+
+// ========================== Node XCS ========================================================== //
+const Sender = require('node-xcs').Sender;
+
+const xcs = new Sender(config.messagingSenderId, config.fcmServerKey);
+
+xcs.on('message', (messageId, from, data, category) => {
+    let deviceToken = from;
+
+    convertDataToMessage(data, (message) => {
+        console.log('message converted')
+        sendUserMessage(data.userToken, message);
+    });
+});
+
+function convertDataToMessage(data, callback) {
+    let message = {
+        from: data.messageFrom,
+        content: data.messageContent
+    }
+
+    callback(message);
+}
+
+xcs.on('connected', () => {
+    console.log("XCS Connected at " + tools.getFormattedTimestamp());
+});
+
+xcs.on('disconnected', console.log);
+xcs.on('online', console.log);
+xcs.on('error', console.log);
+xcs.on('message-error', console.log);
+
+
 
 /**
  * Initiate Bot Connection
