@@ -9,7 +9,8 @@ Here is a screenshot of the data stored for my test entry:
 ![User_Data](User_Data.png)
 
 ## Dependencies
-- Eris library
-- Firebase Realtime Database
-- Firebase Admin Tools
-- Moment
+- [Eris library](https://github.com/abalabahaha/eris)
+- [Firebase Realtime Database](https://www.npmjs.com/package/firebase)
+- [Firebase Admin Tools](https://www.npmjs.com/package/firebase-admin)
+- [node-xcs](https://github.com/guness/node-xcs)
+- [Moment Timezone](https://www.npmjs.com/package/moment-timezone)
