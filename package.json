@@ -1,0 +1,18 @@
+{
+  "name": "hermes",
+  "version": "0.0.1",
+  "description": "Hermes.",
+  "main": "Hermes.js",
+  "author": "Alcha",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "eris": "^0.6.0",
+    "firebase": "^3.7.8",
+    "firebase-admin": "^4.2.1",
+    "moment-timezone": "^0.5.13",
+    "node-xcs": "^0.1.6"
+  },
+  "scripts": {
+    "start": "node Hermes.js"
+  }
+}

@@ -8,9 +8,15 @@ Since moving to Firebase Cloud Messaging, the only data stored is the users phon
 Here is a screenshot of the data stored for my test entry:
 ![User_Data](User_Data.png)
 
-## Dependencies
-- [Eris library](https://github.com/abalabahaha/eris)
-- [Firebase Realtime Database](https://www.npmjs.com/package/firebase)
-- [Firebase Admin Tools](https://www.npmjs.com/package/firebase-admin)
-- [node-xcs](https://github.com/guness/node-xcs)
-- [Moment Timezone](https://www.npmjs.com/package/moment-timezone)
+    Hermes - Hermes.
+    Copyright (C) 2017  Alcha
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.

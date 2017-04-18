@@ -1,9 +1,10 @@
 "use strict"
 
-const Eris = require("eris");
+const Eris = require('eris');
 const config = require('./util/config.json');
-const info = require('./util/package.json');
-const tools = require('./util/tools.js');
+const info = require('./package.json');
+const toolsUtil = require('./util/tools');
+const tools = new toolsUtil()
 
 const bot = new Eris.CommandClient(config.token, {}, {
     description: info.description,
@@ -13,7 +14,7 @@ const bot = new Eris.CommandClient(config.token, {}, {
 
 // ========================== Firebase Initialization =========================================== //
 // Firebase Cloud Messaging
-const admin = require("firebase-admin");
+const admin = require('firebase-admin');
 
 const serviceAccount = require('./util/firebase-admin-key.json');
 
@@ -23,7 +24,7 @@ admin.initializeApp({
 });
 
 // Firebase realtime DB
-const firebase = require("firebase");
+const firebase = require('firebase');
 
 firebase.initializeApp({
     apiKey: config.apiKey,
@@ -56,7 +57,7 @@ function sendUserMessage(userToken, message) {
                         }
                     });
                 }).catch((e) => {
-                    console.log("Error:");
+                    console.log('Error:');
                     console.log(e);
                 });
             }
@@ -72,7 +73,7 @@ function sendUserMessage(userToken, message) {
  * @param {callback} callback - The callback that contains the user
  */
 function getUserByToken(tokenIn, callback) {
-    database.ref('users/' + tokenIn).once('value').then((snapshot) => {
+    database.ref(`users/${tokenIn}`).once('value').then((snapshot) => {
         if (snapshot.val() != null) {
             let user = {
                 channelId: snapshot.val().channelId,
@@ -89,7 +90,7 @@ function getUserByToken(tokenIn, callback) {
 }
 
 function getUserById(idIn, callback) {
-    database.ref('userIdToToken/' + idIn).once('value').then((snapshot) => {
+    database.ref(`userIdToToken/${idIn}`).once('value').then((snapshot) => {
         if (snapshot.val() != null) {
             getUserByToken(snapshot.val(), (user) => {
                 callback(user);
@@ -116,7 +117,7 @@ function syncNewUser(userA, callback) {
     // Verify user doesn't already exist
     getUserById(userA.userId, (userB) => {
         if (userB == null) {
-            database.ref('users/' + userA.userToken).update({
+            database.ref(`users/${userA.userToken}`).update({
                 userId: userA.userId,
                 username: userA.username,
                 channelId: userA.channelId
@@ -134,8 +135,7 @@ function guid() {
             .toString(16)
             .substring(1);
     }
-    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-        s4() + '-' + s4() + s4() + s4();
+    return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
 }
 
 function sendMessage(msg, user, callback) {
@@ -149,10 +149,10 @@ function sendMessage(msg, user, callback) {
 
     admin.messaging().sendToDevice(user.deviceToken, payload)
         .then(function (response) {
-            console.log("Successfully sent message:", response);
+            console.log('Successfully sent message:', response);
         })
         .catch(function (error) {
-            console.log("Error sending message:", error);
+            console.log('Error sending message:', error);
         });
 }
 
@@ -203,10 +203,10 @@ bot.registerCommand('ping', (msg, args) => {
 /**
  * OnReady Event Handler
  */
-bot.on("ready", () => {
+bot.on('ready', () => {
     console.log('Hermes is ready!')
     if (!isNaN(config.notificationChannel)) {
-        bot.createMessage(config.notificationChannel, config.notificationMessage + ' > ' + tools.getFormattedTimestamp())
+        bot.createMessage(config.notificationChannel, `${config.notificationMessage} > ${tools.getFormattedTimestamp()}`)
     }
 
     bot.editStatus('busy', {
@@ -241,13 +241,13 @@ bot.registerCommand('sync', (msg, args) => {
 
                     syncNewUser(user, (success) => {
                         if (success) {
-                            bot.createMessage(msg.channel.id, "You've successfully been added!");
+                            bot.createMessage(msg.channel.id, 'You\'ve successfully been added!');
                         } else {
-                            bot.createMessage(msg.channel.id, "You've already been added, what're you tryin' to pull? :stuck_out_tongue_winking_eye:")
+                            bot.createMessage(msg.channel.id, 'You\'ve already been added, what\'re you tryin\' to pull? :stuck_out_tongue_winking_eye:')
                         }
                     });
                 } else {
-                    bot.createMessage(msg.channel.id, "Your token doesn't seem to exist, please generate a new one and try again.");
+                    bot.createMessage(msg.channel.id, 'Your token doesn\'t seem to exist, please generate a new one and try again.');
                 }
             });
         } else {
@@ -274,14 +274,14 @@ bot.registerCommand('send', (msg, args) => {
                 // Attempt to send message
                 sendMessage(message, user, (sent) => {
                     if (sent) {
-                        bot.createMessage(msg.channel.id, "Your message has successfully been sent!");
+                        bot.createMessage(msg.channel.id, 'Your message has successfully been sent!');
                     } else {
-                        bot.createMessage(msg.channel.id, "There was an error sending your message. Please try again.");
+                        bot.createMessage(msg.channel.id, 'There was an error sending your message. Please try again.');
                     }
                 });
             });
         } else {
-            return "Please provide a message to send."
+            return 'Please provide a message to send.'
         }
     } else {
         return 'This command can only be executed in PMs.';
