@@ -7,12 +7,16 @@
   "license": "GPL-3.0",
   "dependencies": {
     "eris": "^0.6.0",
-    "firebase": "^3.7.8",
+    "firebase": "^4.5.1",
     "firebase-admin": "^4.2.1",
     "moment-timezone": "^0.5.13",
-    "node-xcs": "^0.1.6"
+    "node-xcs": "^0.1.6",
+    "snyk": "^1.83.0"
   },
   "scripts": {
-    "start": "node Hermes.js"
-  }
+    "start": "node Hermes.js",
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
+  },
+  "snyk": true
 }
